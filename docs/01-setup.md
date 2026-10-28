@@ -1,6 +1,5 @@
 # Day 1 — Phase 1: Deploying the Bait
 
-**Date:** 27 October 2026
 **Goal:** Deploy a Windows VM exposed to the internet on RDP and send its security logs to Microsoft Sentinel.
 
 ## Setup
