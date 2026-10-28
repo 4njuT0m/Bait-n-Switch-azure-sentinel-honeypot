@@ -1,0 +1,76 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workspaceName": {
+      "type": "string",
+      "defaultValue": "workspace-baitnswitch",
+      "metadata": {
+        "description": "Log Analytics workspace that has Microsoft Sentinel enabled"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.SecurityInsights/alertRules",
+      "apiVersion": "2023-02-01",
+      "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('workspaceName'))]",
+      "name": "[guid(resourceGroup().id, parameters('workspaceName'), 'honeypot-rdp-bruteforce')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "Honeypot - RDP Brute Force (3+ failed logons)",
+        "description": "Raises an incident when one IP fails to log on 3 or more times within 1 hour.",
+        "severity": "Medium",
+        "enabled": true,
+        "query": "SecurityEvent\n| where EventID == 4625\n| summarize FailedAttempts = count(),\n            TargetAccounts = make_set(TargetAccount),\n            FirstAttempt = min(TimeGenerated),\n            LastAttempt = max(TimeGenerated)\n            by IpAddress, Computer\n| where FailedAttempts >= 3",
+        "queryFrequency": "PT5M",
+        "queryPeriod": "PT1H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionEnabled": false,
+        "suppressionDuration": "PT5H",
+        "tactics": [
+          "CredentialAccess"
+        ],
+        "techniques": [
+          "T1110"
+        ],
+        "eventGroupingSettings": {
+          "aggregationKind": "AlertPerResult"
+        },
+        "entityMappings": [
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "IpAddress"
+              }
+            ]
+          },
+          {
+            "entityType": "Host",
+            "fieldMappings": [
+              {
+                "identifier": "HostName",
+                "columnName": "Computer"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities",
+            "groupByEntities": [],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        }
+      }
+    }
+  ]
+}
