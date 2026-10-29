@@ -1,0 +1,340 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workspaceName": {
+      "type": "string",
+      "defaultValue": "workspace-baitnswitch",
+      "metadata": {
+        "description": "Log Analytics workspace that has Microsoft Sentinel enabled"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.SecurityInsights/alertRules",
+      "apiVersion": "2023-02-01",
+      "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('workspaceName'))]",
+      "name": "[guid(resourceGroup().id, parameters('workspaceName'), 'honeypot-new-local-user')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "Honeypot - New local user account created",
+        "description": "A new local user account was created on the honeypot (Event 4720).",
+        "severity": "Medium",
+        "enabled": true,
+        "query": "SecurityEvent\n| where EventID == 4720\n| project TimeGenerated, Computer, CreatedBy = Account, NewUser = TargetAccount",
+        "queryFrequency": "PT5M",
+        "queryPeriod": "PT10M",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionEnabled": false,
+        "suppressionDuration": "PT5H",
+        "tactics": [
+          "Persistence"
+        ],
+        "techniques": [
+          "T1136"
+        ],
+        "eventGroupingSettings": {
+          "aggregationKind": "AlertPerResult"
+        },
+        "entityMappings": [
+          {
+            "entityType": "Host",
+            "fieldMappings": [
+              {
+                "identifier": "HostName",
+                "columnName": "Computer"
+              }
+            ]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "CreatedBy"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities",
+            "groupByEntities": [],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.SecurityInsights/alertRules",
+      "apiVersion": "2023-02-01",
+      "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('workspaceName'))]",
+      "name": "[guid(resourceGroup().id, parameters('workspaceName'), 'honeypot-added-to-admins')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "Honeypot - User added to local Administrators",
+        "description": "An account was added to the local Administrators group (Event 4732).",
+        "severity": "High",
+        "enabled": true,
+        "query": "SecurityEvent\n| where EventID == 4732\n| where TargetAccount has \"Administrators\" or TargetSid == \"S-1-5-32-544\"\n| project TimeGenerated, Computer, ChangedBy = Account, Group = TargetAccount, MemberSid",
+        "queryFrequency": "PT5M",
+        "queryPeriod": "PT10M",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionEnabled": false,
+        "suppressionDuration": "PT5H",
+        "tactics": [
+          "Persistence",
+          "PrivilegeEscalation"
+        ],
+        "techniques": [
+          "T1098"
+        ],
+        "eventGroupingSettings": {
+          "aggregationKind": "AlertPerResult"
+        },
+        "entityMappings": [
+          {
+            "entityType": "Host",
+            "fieldMappings": [
+              {
+                "identifier": "HostName",
+                "columnName": "Computer"
+              }
+            ]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "ChangedBy"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities",
+            "groupByEntities": [],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.SecurityInsights/alertRules",
+      "apiVersion": "2023-02-01",
+      "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('workspaceName'))]",
+      "name": "[guid(resourceGroup().id, parameters('workspaceName'), 'honeypot-scheduled-task')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "Honeypot - Scheduled task created by a user",
+        "description": "A scheduled task was created by a user account, not by the system (Event 4698).",
+        "severity": "Medium",
+        "enabled": true,
+        "query": "SecurityEvent\n| where EventID == 4698\n| extend CreatedBy = extract(@'Name=\"SubjectUserName\">([^<]*)<', 1, EventData),\n         TaskName  = extract(@'Name=\"TaskName\">([^<]*)<', 1, EventData)\n| where isnotempty(CreatedBy) and not(CreatedBy endswith \"$\")\n| project TimeGenerated, Computer, CreatedBy, TaskName",
+        "queryFrequency": "PT5M",
+        "queryPeriod": "PT10M",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionEnabled": false,
+        "suppressionDuration": "PT5H",
+        "tactics": [
+          "Persistence",
+          "Execution"
+        ],
+        "techniques": [
+          "T1053"
+        ],
+        "eventGroupingSettings": {
+          "aggregationKind": "AlertPerResult"
+        },
+        "entityMappings": [
+          {
+            "entityType": "Host",
+            "fieldMappings": [
+              {
+                "identifier": "HostName",
+                "columnName": "Computer"
+              }
+            ]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "Name",
+                "columnName": "CreatedBy"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities",
+            "groupByEntities": [],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.SecurityInsights/alertRules",
+      "apiVersion": "2023-02-01",
+      "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('workspaceName'))]",
+      "name": "[guid(resourceGroup().id, parameters('workspaceName'), 'honeypot-firewall-disabled')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "Honeypot - Windows Firewall disabled",
+        "description": "A command that turns off Windows Firewall was run (Sysmon Event 1).",
+        "severity": "High",
+        "enabled": true,
+        "query": "Event\n| where Source == \"Microsoft-Windows-Sysmon\" and EventID == 1\n| extend User        = extract(@\"User: (.*?) LogonGuid:\", 1, RenderedDescription),\n         CommandLine = extract(@\"CommandLine: (.*?) CurrentDirectory:\", 1, RenderedDescription)\n| where (CommandLine has \"advfirewall\" and CommandLine has \"off\")\n     or (CommandLine has \"Set-NetFirewallProfile\" and CommandLine has \"False\")\n| project TimeGenerated, Computer, User, CommandLine",
+        "queryFrequency": "PT5M",
+        "queryPeriod": "PT10M",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionEnabled": false,
+        "suppressionDuration": "PT5H",
+        "tactics": [
+          "DefenseEvasion"
+        ],
+        "techniques": [
+          "T1562"
+        ],
+        "eventGroupingSettings": {
+          "aggregationKind": "AlertPerResult"
+        },
+        "entityMappings": [
+          {
+            "entityType": "Host",
+            "fieldMappings": [
+              {
+                "identifier": "HostName",
+                "columnName": "Computer"
+              }
+            ]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "User"
+              }
+            ]
+          },
+          {
+            "entityType": "Process",
+            "fieldMappings": [
+              {
+                "identifier": "CommandLine",
+                "columnName": "CommandLine"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities",
+            "groupByEntities": [],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.SecurityInsights/alertRules",
+      "apiVersion": "2023-02-01",
+      "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('workspaceName'))]",
+      "name": "[guid(resourceGroup().id, parameters('workspaceName'), 'honeypot-powershell-outbound')]",
+      "kind": "Scheduled",
+      "properties": {
+        "displayName": "Honeypot - PowerShell connection to the internet",
+        "description": "PowerShell made a network connection to a public IP address, e.g. a download (Sysmon Event 3).",
+        "severity": "Medium",
+        "enabled": true,
+        "query": "Event\n| where Source == \"Microsoft-Windows-Sysmon\" and EventID == 3\n| extend Image           = extract(@\"Image: (.*?) User:\", 1, RenderedDescription),\n         User            = extract(@\"User: (.*?) Protocol:\", 1, RenderedDescription),\n         DestinationIp   = extract(@\"DestinationIp: (\\S+)\", 1, RenderedDescription),\n         DestinationPort = extract(@\"DestinationPort: (\\S+)\", 1, RenderedDescription)\n| where Image endswith \"powershell.exe\" or Image endswith \"pwsh.exe\"\n| where not(ipv4_is_private(DestinationIp)) and DestinationIp !in (\"168.63.129.16\", \"169.254.169.254\")\n| project TimeGenerated, Computer, User, Image, DestinationIp, DestinationPort",
+        "queryFrequency": "PT5M",
+        "queryPeriod": "PT10M",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+        "suppressionEnabled": false,
+        "suppressionDuration": "PT5H",
+        "tactics": [
+          "CommandAndControl"
+        ],
+        "techniques": [
+          "T1105"
+        ],
+        "eventGroupingSettings": {
+          "aggregationKind": "AlertPerResult"
+        },
+        "entityMappings": [
+          {
+            "entityType": "Host",
+            "fieldMappings": [
+              {
+                "identifier": "HostName",
+                "columnName": "Computer"
+              }
+            ]
+          },
+          {
+            "entityType": "Account",
+            "fieldMappings": [
+              {
+                "identifier": "FullName",
+                "columnName": "User"
+              }
+            ]
+          },
+          {
+            "entityType": "IP",
+            "fieldMappings": [
+              {
+                "identifier": "Address",
+                "columnName": "DestinationIp"
+              }
+            ]
+          }
+        ],
+        "incidentConfiguration": {
+          "createIncident": true,
+          "groupingConfiguration": {
+            "enabled": true,
+            "reopenClosedIncident": false,
+            "lookbackDuration": "PT5H",
+            "matchingMethod": "AllEntities",
+            "groupByEntities": [],
+            "groupByAlertDetails": [],
+            "groupByCustomDetails": []
+          }
+        }
+      }
+    }
+  ]
+}
