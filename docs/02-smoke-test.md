@@ -52,7 +52,7 @@ SecurityEvent
 
 I repeated the attack (5 failed logons at 11:11 UTC). The rule created incident **ID 1400: Honeypot - RDP Brute Force (3+ failed logons)** with 1 alert. The incident graph links my IP to `FIN-PAYROLL-01`.
 
-The incident is handled in the Microsoft Defender portal (Cases). I set its status to **Open**, the Defender equivalent of Active, and assigned it to myself.
+The incident is handled in the Microsoft Defender portal (Cases). The screenshot shows it as created (status New, unassigned). I then set its status to **Open**, the Defender equivalent of Active, and assigned it to myself.
 
 ![Incident open and assigned](../Screenshots/P2-03-incident-active-assigned.png)
 
@@ -70,7 +70,7 @@ Event
 | take 10
 ```
 
-![Sysmon process creation events](../Screenshots/P2-04-sysmon-command-lines.png)
+![Sysmon process creation events](../Screenshots/P2-04-sysmon-events-in-sentinel.png)
 
 Sysmon Event ID 1 (Process Create) records each process with its full command line and parent process. Events appear in Sentinel only from the time the data collection rule was created.
 
